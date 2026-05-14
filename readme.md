@@ -47,7 +47,7 @@ One script configures the entire system end‑to‑end.
 - Template services for multi‑user flexibility
 ***
 ### 📦 Requirements
- - Debian 12 / Raspberry Pi OS (Bookworm) or newer
+ - Debian 13 / Raspberry Pi OS (Trixie) or newer
  - A USB webcam
  - Internet connection
  - A non‑root user account (script must be run as that user)
