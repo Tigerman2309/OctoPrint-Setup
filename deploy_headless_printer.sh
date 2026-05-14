@@ -82,6 +82,7 @@ mkdir -p "$HOME/backups_share"
 chmod 755 "$HOME" "$HOME/samba" "$HOME/backups_share"
 sudo chown nobody:nogroup "$HOME/samba" "$HOME/backups_share"
 
+HOME_DIR=$(eval echo ~$USER)
 MOUNT_UNIT="/etc/systemd/system/home-$(whoami)-backups_share.mount"
 
 sudo bash -c "cat <<EOF > $MOUNT_UNIT
@@ -91,8 +92,8 @@ After=local-fs.target
 Before=smbd.service
 
 [Mount]
-What=%h/.octoprint/data/backup
-Where=%h/backups_share
+What=$HOME_DIR/.octoprint/data/backup
+Where=$HOME_DIR/backups_share
 Type=none
 Options=bind
 
@@ -202,14 +203,16 @@ chmod +x "$HOME/scripts/webcamDaemon"
 # ============================================================
 echo "=== Creating webcam systemd template ==="
 
+HOME_DIR=$(eval echo ~$USER)
+
 sudo bash -c "cat <<EOF > /etc/systemd/system/webcam@.service
 [Unit]
 Description=Webcam MJPG-Streamer Service for %i
 After=network-online.target
 
 [Service]
-User=%i
-ExecStart=%h/scripts/webcamDaemon
+User=$USER
+ExecStart=$HOME_DIR/scripts/webcamDaemon
 Restart=always
 RestartSec=2
 
