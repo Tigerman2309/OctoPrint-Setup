@@ -37,7 +37,6 @@ One script configures the entire system end‑to‑end.
 - Systemd template service: `webcam@<user>`
 
 #### ✔ Samba guest shares
-- Public share: `$HOME/samba`
 - Backups share: `$HOME/backups_share`
 - Bind‑mounted from OctoPrint’s backup directory
 - No authentication required
@@ -170,7 +169,6 @@ sudo systemctl disable --now home-$(whoami)-backups_share.mount
 rm -rf $HOME/OctoPrint
 rm -rf $HOME/mjpg-streamer
 rm -rf $HOME/scripts
-rm -rf $HOME/samba
 rm -rf $HOME/backups_share
 ~~~
 ✔ Remove systemd units:
