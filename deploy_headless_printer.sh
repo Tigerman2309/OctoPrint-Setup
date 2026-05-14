@@ -54,14 +54,19 @@ pip install --upgrade pip
 pip install octoprint
 deactivate
 
+sudo usermod -a -G tty $USER
+sudo usermod -a -G dialout $USER
+
 echo "=== Creating OctoPrint systemd template ==="
 sudo bash -c "cat <<EOF > /etc/systemd/system/octoprint@.service
 [Unit]
-Description=OctoPrint instance for %i
+Description=OctoPrint instance for $USER
 After=network-online.target
+Wants=network-online.target
 
 [Service]
-User=%i
+Type=exec
+User=$USER
 ExecStart=$HOME_DIR/OctoPrint/venv/bin/octoprint serve
 Restart=on-failure
 Nice=5
@@ -200,8 +205,9 @@ HOME_DIR=$(eval echo ~$USER)
 
 sudo bash -c "cat <<EOF > /etc/systemd/system/webcam@.service
 [Unit]
-Description=Webcam MJPG-Streamer Service for %i
+Description=Webcam MJPG-Streamer Service for $USER
 After=network-online.target
+Wantsy=network-online.target
 
 [Service]
 User=$USER
@@ -216,12 +222,20 @@ EOF"
 sudo systemctl daemon-reload
 sudo systemctl enable --now "webcam@$(whoami)"
 
+HOSTNAME=$(hostname)
+IP=$(hostname -I | awk '{print $1}')
+
 # ============================================================
 # DONE
 # ============================================================
 echo
 echo "=== Deployment complete ==="
-echo "OctoPrint:     http://<ip>:5000"
-echo "Webcam:        http://<ip>:8080"
-echo "Samba Backups: $HOME/backups_share"
+echo "OctoPrint:     http://$IP:5000"
+echo "OctoPrint:     http://$HOSTNAME:5000"
+echo
+echo "Webcam:        http://$IP:8080"
+echo "Webcam:        http://$HOSTNAME:8080"
+echo
+echo "Samba Backups: //$IP/backups"
+echo "Samba Backups: //$HOSTNAME/backups"
 echo
