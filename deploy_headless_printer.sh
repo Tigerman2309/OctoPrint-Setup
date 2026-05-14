@@ -16,6 +16,7 @@ DEVICE="/dev/webcam"
 GIT_URL="https://github.com/jacksonliam/mjpg-streamer.git"
 MJPG_DIR="$HOME/mjpg-streamer"
 OCTO_DIR="$HOME/OctoPrint"
+HOME_DIR=$(eval echo ~$USER)
 
 echo "=== Starting full headless deployment for user: $(whoami) ==="
 echo "Vendor ID: $VENDOR_ID"
@@ -37,7 +38,7 @@ echo "=== Installing dependencies ==="
 sudo apt install -y \
     python3 python3-pip python3-venv python3-dev \
     build-essential git libyaml-dev \
-    samba v4l-utils cmake libjpeg8-dev \z
+    samba v4l-utils cmake libjpeg62-turbo-dev \z
     gcc g++
 
 # ============================================================
@@ -61,7 +62,7 @@ After=network-online.target
 
 [Service]
 User=%i
-ExecStart=%h/OctoPrint/venv/bin/octoprint serve
+ExecStart=$HOME_DIR/OctoPrint/venv/bin/octoprint serve
 Restart=on-failure
 Nice=5
 
@@ -83,7 +84,6 @@ mkdir -p "$HOME/backups_share"
 chmod 755 "$HOME" "$HOME/samba" "$HOME/backups_share"
 sudo chown nobody:nogroup "$HOME/samba" "$HOME/backups_share"
 
-HOME_DIR=$(eval echo ~$USER)
 MOUNT_UNIT="/etc/systemd/system/home-$(whoami)-backups_share.mount"
 
 sudo bash -c "cat <<EOF > $MOUNT_UNIT
@@ -115,14 +115,14 @@ sudo bash -c "cat <<EOF > /etc/samba/smb.conf
    guest account = nobody
 
 [public]
-   path = $HOME/samba
+   path = $HOME_DIR/samba
    browseable = yes
    read only = yes
    guest ok = yes
    force user = nobody
 
 [backups]
-   path = $HOME/backups_share
+   path = $HOME_DIR/backups_share
    browseable = yes
    read only = yes
    guest ok = yes
