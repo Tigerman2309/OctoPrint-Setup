@@ -51,6 +51,7 @@ One script configures the entire system end‑to‑end.
  - A USB webcam
  - Internet connection
  - A non‑root user account (script must be run as that user)
+ - **Sudo** Access
 ***
 ### 🔧 Installation
 
