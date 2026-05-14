@@ -1,0 +1,232 @@
+#!/bin/bash
+set -e
+
+# ============================================================
+# PARAMETERS
+# ============================================================
+VENDOR_ID="$1"
+PRODUCT_ID="$2"
+
+if [ -z "$VENDOR_ID" ] || [ -z "$PRODUCT_ID" ]; then
+    echo "Usage: $0 <VendorID> <ProductID>"
+    exit 1
+fi
+
+DEVICE="/dev/webcam"
+GIT_URL="https://github.com/jacksonliam/mjpg-streamer.git"
+MJPG_DIR="$HOME/mjpg-streamer"
+OCTO_DIR="$HOME/OctoPrint"
+
+echo "=== Starting full headless deployment for user: $(whoami) ==="
+echo "Vendor ID: $VENDOR_ID"
+echo "Product ID: $PRODUCT_ID"
+echo "Home: $HOME"
+echo
+
+# ============================================================
+# SYSTEM UPDATE
+# ============================================================
+echo "=== Updating system ==="
+sudo apt update
+sudo apt upgrade -y
+
+# ============================================================
+# INSTALL DEPENDENCIES
+# ============================================================
+echo "=== Installing dependencies ==="
+sudo apt install -y \
+    python3 python3-pip python3-venv python3-dev \
+    build-essential git libyaml-dev \
+    samba v4l-utils cmake
+
+# ============================================================
+# OCTOPRINT INSTALLATION
+# ============================================================
+echo "=== Installing OctoPrint ==="
+mkdir -p "$OCTO_DIR"
+cd "$OCTO_DIR"
+
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install octoprint
+deactivate
+
+echo "=== Creating OctoPrint systemd template ==="
+sudo bash -c "cat <<EOF > /etc/systemd/system/octoprint@.service
+[Unit]
+Description=OctoPrint instance for %i
+After=network-online.target
+
+[Service]
+User=%i
+ExecStart=%h/OctoPrint/venv/bin/octoprint serve
+Restart=on-failure
+Nice=5
+
+[Install]
+WantedBy=multi-user.target
+EOF"
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now "octoprint@$(whoami)"
+
+# ============================================================
+# SAMBA + BACKUPS BIND-MOUNT
+# ============================================================
+echo "=== Setting up Samba shares ==="
+
+mkdir -p "$HOME/samba"
+mkdir -p "$HOME/backups_share"
+
+chmod 755 "$HOME" "$HOME/samba" "$HOME/backups_share"
+sudo chown nobody:nogroup "$HOME/samba" "$HOME/backups_share"
+
+MOUNT_UNIT="/etc/systemd/system/home-$(whoami)-backups_share.mount"
+
+sudo bash -c "cat <<EOF > $MOUNT_UNIT
+[Unit]
+Description=Bind mount for OctoPrint backups
+After=local-fs.target
+Before=smbd.service
+
+[Mount]
+What=%h/.octoprint/data/backup
+Where=%h/backups_share
+Type=none
+Options=bind
+
+[Install]
+WantedBy=multi-user.target
+EOF"
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now "home-$(whoami)-backups_share.mount"
+
+echo "=== Writing Samba configuration ==="
+sudo bash -c "cat <<EOF > /etc/samba/smb.conf
+[global]
+   workgroup = WORKGROUP
+   map to guest = Bad User
+   server min protocol = SMB2
+   server max protocol = SMB3
+   guest account = nobody
+
+[public]
+   path = $HOME/samba
+   browseable = yes
+   read only = yes
+   guest ok = yes
+   force user = nobody
+
+[backups]
+   path = $HOME/backups_share
+   browseable = yes
+   read only = yes
+   guest ok = yes
+   force user = nobody
+EOF"
+
+sudo systemctl restart smbd
+
+# ============================================================
+# MJPG-STREAMER INSTALLATION
+# ============================================================
+echo "=== Installing mjpg-streamer ==="
+
+mkdir -p "$MJPG_DIR"
+cd "$MJPG_DIR"
+
+if [ ! -d "$MJPG_DIR/mjpg-streamer-experimental" ]; then
+    git clone "$GIT_URL" .
+fi
+
+cd mjpg-streamer-experimental
+make clean || true
+make
+
+echo "=== Creating udev rule for /dev/webcam ==="
+sudo bash -c "cat <<EOF > /etc/udev/rules.d/99-webcam.rules
+SUBSYSTEM==\"video4linux\", ATTRS{idVendor}==\"$VENDOR_ID\", ATTRS{idProduct}==\"$PRODUCT_ID\", SYMLINK+=\"webcam\"
+EOF"
+
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+# ============================================================
+# WEBCAM DAEMON
+# ============================================================
+echo "=== Installing webcamDaemon ==="
+
+mkdir -p "$HOME/scripts"
+mkdir -p "$HOME/.mjpg-streamer"
+
+cat <<EOF > "$HOME/scripts/webcamDaemon"
+#!/bin/bash
+
+DEVICE="${DEVICE:-/dev/webcam}"
+MJPGSTREAMER_HOME="$MJPG_DIR/mjpg-streamer-experimental"
+MJPGSTREAMER_INPUT_USB="input_uvc.so"
+LOGFILE="\$HOME/.mjpg-streamer/webcam.log"
+
+mkdir -p "\$HOME/.mjpg-streamer"
+
+echo "Starting webcamDaemon using device \$DEVICE" | tee -a "\$LOGFILE"
+
+for i in {1..10}; do
+    if [ -e "\$DEVICE" ]; then
+        echo "Camera detected at \$DEVICE" | tee -a "\$LOGFILE"
+        break
+    fi
+    echo "Waiting for camera (\$i/10)..." | tee -a "\$LOGFILE"
+    sleep 1
+done
+
+if [ ! -e "\$DEVICE" ]; then
+    echo "ERROR: Camera not found at \$DEVICE" | tee -a "\$LOGFILE"
+    exit 1
+fi
+
+cd "\$MJPGSTREAMER_HOME"
+
+exec ./mjpg_streamer \
+    -i "./\${MJPGSTREAMER_INPUT_USB} -d \$DEVICE -r 1280x720 -f 15" \
+    -o "./output_http.so -p 8080 -w ./www" \
+    >> "\$LOGFILE" 2>&1
+EOF
+
+chmod +x "$HOME/scripts/webcamDaemon"
+
+# ============================================================
+# SYSTEMD TEMPLATE FOR MJPG-STREAMER
+# ============================================================
+echo "=== Creating webcam systemd template ==="
+
+sudo bash -c "cat <<EOF > /etc/systemd/system/webcam@.service
+[Unit]
+Description=Webcam MJPG-Streamer Service for %i
+After=network-online.target
+
+[Service]
+User=%i
+ExecStart=%h/scripts/webcamDaemon
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+EOF"
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now "webcam@$(whoami)"
+
+# ============================================================
+# DONE
+# ============================================================
+echo
+echo "=== Deployment complete ==="
+echo "OctoPrint:     http://<ip>:5000"
+echo "Webcam:        http://<ip>:8080"
+echo "Samba Public:  $HOME/samba"
+echo "Samba Backups: $HOME/backups_share"
+echo
