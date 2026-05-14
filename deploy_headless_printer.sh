@@ -78,11 +78,10 @@ sudo systemctl enable --now "octoprint@$(whoami)"
 # ============================================================
 echo "=== Setting up Samba shares ==="
 
-mkdir -p "$HOME/samba"
 mkdir -p "$HOME/backups_share"
 
-chmod 755 "$HOME" "$HOME/samba" "$HOME/backups_share"
-sudo chown nobody:nogroup "$HOME/samba" "$HOME/backups_share"
+chmod 755 "$HOME" "$HOME/backups_share"
+sudo chown nobody:nogroup "$HOME/backups_share"
 
 MOUNT_UNIT="/etc/systemd/system/home-$(whoami)-backups_share.mount"
 
@@ -113,13 +112,6 @@ sudo bash -c "cat <<EOF > /etc/samba/smb.conf
    server min protocol = SMB2
    server max protocol = SMB3
    guest account = nobody
-
-[public]
-   path = $HOME_DIR/samba
-   browseable = yes
-   read only = yes
-   guest ok = yes
-   force user = nobody
 
 [backups]
    path = $HOME_DIR/backups_share
@@ -231,6 +223,5 @@ echo
 echo "=== Deployment complete ==="
 echo "OctoPrint:     http://<ip>:5000"
 echo "Webcam:        http://<ip>:8080"
-echo "Samba Public:  $HOME/samba"
 echo "Samba Backups: $HOME/backups_share"
 echo
