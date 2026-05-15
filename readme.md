@@ -184,3 +184,8 @@ sudo systemctl daemon-reload
 
 This script is provided as‑is.
 Use, modify, and redistribute freely.
+***
+### 📜 Linked Software
+**OctoPrint** https://octoprint.org
+
+**mjpg-streamer** https://github.com/jacksonliam/mjpg-streamer
