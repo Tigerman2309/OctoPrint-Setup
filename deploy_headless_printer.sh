@@ -185,7 +185,7 @@ fi
 
 while true; do
     pushd "\$MJPGSTREAMER_HOME"
-    exec ./mjpg_streamer -i "./\${MJPGSTREAMER_INPUT_USB} -d \$DEVICE -r 1280x720 -f 15" -o "./output_http.so -p 8080 -w ./www"
+    exec ./mjpg_streamer -i "./\${MJPGSTREAMER_INPUT_USB} -d \$DEVICE -r 1280x720 -f 15 -y" -o "./output_http.so -p 8080 -w ./www"
     popd
     sleep 120
 done
