@@ -166,32 +166,29 @@ cat <<EOF > "$HOME_DIR/scripts/webcamDaemon"
 DEVICE="${DEVICE:-/dev/webcam}"
 MJPGSTREAMER_HOME="$MJPG_DIR/mjpg-streamer-experimental"
 MJPGSTREAMER_INPUT_USB="input_uvc.so"
-LOGFILE="\$HOME_DIR/.mjpg-streamer/webcam.log"
 
-mkdir -p "\$HOME_DIR/.mjpg-streamer"
-
-echo "Starting webcamDaemon using device \$DEVICE" | tee -a "\$LOGFILE"
+echo "Starting webcamDaemon using device \$DEVICE"
 
 for i in {1..10}; do
     if [ -e "\$DEVICE" ]; then
-        echo "Camera detected at \$DEVICE" | tee -a "\$LOGFILE"
+        echo "Camera detected at \$DEVICE"
         break
     fi
-    echo "Waiting for camera (\$i/10)..." | tee -a "\$LOGFILE"
+    echo "Waiting for camera (\$i/10)..."
     sleep 1
 done
 
 if [ ! -e "\$DEVICE" ]; then
-    echo "ERROR: Camera not found at \$DEVICE" | tee -a "\$LOGFILE"
+    echo "ERROR: Camera not found at \$DEVICE"
     exit 1
 fi
 
-cd "\$MJPGSTREAMER_HOME"
-
-exec ./mjpg_streamer \
-    -i "./\${MJPGSTREAMER_INPUT_USB} -d \$DEVICE -r 1280x720 -f 15" \
-    -o "./output_http.so -p 8080 -w ./www" \
-    >> "\$LOGFILE" 2>&1
+while true; do
+    pushd "\$MJPGSTREAMER_HOME"
+    exec ./mjpg_streamer -i "./\${MJPGSTREAMER_INPUT_USB} -d \$DEVICE -r 1280x720 -f 15" -o "./output_http.so -p 8080 -w ./www"
+    popd
+    sleep 120
+done
 EOF
 
 chmod +x "$HOME_DIR/scripts/webcamDaemon"
