@@ -157,18 +157,18 @@ sudo udevadm trigger
 # ============================================================
 echo "=== Installing webcamDaemon ==="
 
-mkdir -p "$HOME/scripts"
-mkdir -p "$HOME/.mjpg-streamer"
+mkdir -p "$HOME_DIR/scripts"
+mkdir -p "$HOME_DIR/.mjpg-streamer"
 
-cat <<EOF > "$HOME/scripts/webcamDaemon"
+cat <<EOF > "$HOME_DIR/scripts/webcamDaemon"
 #!/bin/bash
 
 DEVICE="${DEVICE:-/dev/webcam}"
 MJPGSTREAMER_HOME="$MJPG_DIR/mjpg-streamer-experimental"
 MJPGSTREAMER_INPUT_USB="input_uvc.so"
-LOGFILE="\$HOME/.mjpg-streamer/webcam.log"
+LOGFILE="\$HOME_DIR/.mjpg-streamer/webcam.log"
 
-mkdir -p "\$HOME/.mjpg-streamer"
+mkdir -p "\$HOME_DIR/.mjpg-streamer"
 
 echo "Starting webcamDaemon using device \$DEVICE" | tee -a "\$LOGFILE"
 
@@ -194,20 +194,18 @@ exec ./mjpg_streamer \
     >> "\$LOGFILE" 2>&1
 EOF
 
-chmod +x "$HOME/scripts/webcamDaemon"
+chmod +x "$HOME_DIR/scripts/webcamDaemon"
 
 # ============================================================
 # SYSTEMD TEMPLATE FOR MJPG-STREAMER
 # ============================================================
 echo "=== Creating webcam systemd template ==="
 
-HOME_DIR=$(eval echo ~$USER)
-
 sudo bash -c "cat <<EOF > /etc/systemd/system/webcam@.service
 [Unit]
 Description=Webcam MJPG-Streamer Service for $USER
 After=network-online.target
-Wantsy=network-online.target
+Wants=network-online.target
 
 [Service]
 User=$USER
