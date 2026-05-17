@@ -149,10 +149,6 @@ If missing, reload rules:
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ~~~
-#### mjpg‑streamer logs
-~~~
-$HOME/.mjpg-streamer/webcam.log
-~~~
 #### OctoPrint logs
 ~~~
 $HOME/.octoprint/logs/
@@ -171,6 +167,7 @@ rm -rf $HOME/OctoPrint
 rm -rf $HOME/mjpg-streamer
 rm -rf $HOME/scripts
 rm -rf $HOME/backups_share
+rm -rf $HOME/.octoprint
 ~~~
 ✔ Remove systemd units:
 ~~~
@@ -178,6 +175,12 @@ sudo rm /etc/systemd/system/octoprint@.service
 sudo rm /etc/systemd/system/webcam@.service
 sudo rm /etc/systemd/system/home-$(whoami)-backups_share.mount
 sudo systemctl daemon-reload
+~~~
+✔ Remove udev units:
+~~~
+sudo rm /etc/udev/rules.d/99-webcam.rules
+sudo udevadm control --reload-rules
+sudo udevadm trigger
 ~~~
 ***
 ### 📜 License
