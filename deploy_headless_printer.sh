@@ -146,7 +146,7 @@ make
 
 echo "=== Creating udev rule for /dev/webcam ==="
 sudo bash -c "cat <<EOF > /etc/udev/rules.d/99-webcam.rules
-SUBSYSTEM==\"video4linux\", ATTRS{idVendor}==\"$VENDOR_ID\", ATTRS{idProduct}==\"$PRODUCT_ID\", NAME=\"video0\" SYMLINK+=\"webcam\"
+SUBSYSTEM==\"video4linux\", KERNEL==\"video[0-9]*\", ATTR{index}==\"0\", ATTRS{idVendor}==\"$VENDOR_ID\", ATTRS{idProduct}==\"$PRODUCT_ID\", SYMLINK+=\"webcam\"
 EOF"
 
 sudo udevadm control --reload-rules
