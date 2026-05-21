@@ -93,8 +93,8 @@ MOUNT_UNIT="/etc/systemd/system/home-$(whoami)-backups_share.mount"
 sudo bash -c "cat <<EOF > $MOUNT_UNIT
 [Unit]
 Description=Bind mount for OctoPrint backups
-After=local-fs.target
-Before=smbd.service
+After=network-online.target smbd.service
+Wants=smbd.service
 
 [Mount]
 What=$HOME_DIR/.octoprint/data/backup
